@@ -12,15 +12,15 @@ error_reporting(E_ALL);
 ################################################################################
 
 $config = array(
-	'user' 					=> 'user',
-	'path_to_sites'			=> '/path/to/sites',
-	'local_backup_days'		=> 5,
-	'home_dir'				=> '/path/to/home/directory',
-	's3_key'				=> 'OMGTHISISMYKEY',
-	's3_secret'				=> 'PLEASEDONTSHARETHISSECRETKEYWITHANYONE',
-	'bucket'				=> 'mr-bucket-rules',
-	'chunk_size_in_MB'		=> 10,
-	'remote_backup_days'	=> 10
+	'user'               => 'user',
+	'path_to_sites'      => '/path/to/sites',
+	'local_backup_days'  => 5,
+	'home_dir'           => '/path/to/home/directory',
+	's3_key'             => 'OMGTHISISMYKEY',
+	's3_secret'          => 'PLEASEDONTSHARETHISSECRETKEYWITHANYONE',
+	'bucket'             => 'mr-bucket-rules',
+	'chunk_size_in_MB'   => 10,
+	'remote_backup_days' => 10
 );
 
 $sites = array(
