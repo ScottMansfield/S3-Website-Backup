@@ -235,6 +235,7 @@ foreach($response->body->Contents as $file)
 	$stamp = $time->getTimestamp();
 	if ($stamp < $file_cutoff_time)
 	{
+		echo 'Deleting ' . $file->Key . PHP_EOL;
 		$s3->delete_object($bucket, $file->Key);
 	}
 }
