@@ -231,7 +231,6 @@ $response = $s3->list_objects($bucket, array('prefix' => 'backup_' . $config['us
 foreach($response->body->Contents as $file)
 {
 	$time = new DateTime($file->LastModified->to_string());
-	$time->sub($interval);
 	$stamp = $time->getTimestamp();
 	if ($stamp < $file_cutoff_time)
 	{
