@@ -127,7 +127,7 @@ while (($file = readdir($dir_handle)) !== false)
 		$file_cutoff_time > filemtime(__DIR__ . '/' . $file))
 	{
 		echo 'Deleting ' . $file . PHP_EOL;
-		unlink($file);
+		unlink(__DIR__ . '/' . $file);
 	}
 }
 
