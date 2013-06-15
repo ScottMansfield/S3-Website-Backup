@@ -1,6 +1,14 @@
-#!/usr/local/bin/php-5.3
+#!/usr/bin/php5
 
 <?php
+
+// Autoload composer packages!
+require 'vendor/autoload.php';
+
+use Aws\S3\S3Client;
+use Aws\Common\Enum\Size;
+use Aws\Common\Exception\MultipartUploadException;
+use Aws\S3\Model\MultipartUpload\UploadBuilder;
 
 // the above should be changed to the path of the php 5.3
 // executable on your system
@@ -141,11 +149,10 @@ echo 'Cleanup complete.' . PHP_EOL . PHP_EOL;
 ################################################################################
 
 putenv('HOME=' . $config['home_dir']);
-require_once 'sdk-1.5.3/sdk.class.php';
 
 define('MB', 1024 * 1024);
 
-$s3 = new AmazonS3(array(
+$s3 = S3Client::factory(array(
 	'key' => $config['s3_key'],
 	'secret' => $config['s3_secret']
 ));
@@ -158,40 +165,24 @@ if (!$file) die("Could not open $file_name for upload." . PHP_EOL);
 $upload_file_name = basename($file_name);
 
 echo 'Creating object.' . PHP_EOL . PHP_EOL;
-$response = $s3->initiate_multipart_upload($bucket, $upload_file_name);
+$uploader = UploadBuilder::newInstance()
+    ->setClient($s3)
+    ->setSource($file)
+    ->setBucket($bucket)
+    ->setKey($upload_file_name)
+    ->setConcurrency(3)
+    ->build();
 
-$upload_id = (string)$response->body->UploadId;
-
-$chunk_size = intval($config['chunk_size_in_MB']);
-
-echo "Uploading parts in $chunk_size MB chunks." . PHP_EOL . PHP_EOL;
-$part_counts = $s3->get_multipart_counts(filesize($file_name), $chunk_size*MB);
-$total_parts = count($part_counts);
-$current_part = 1;
-
-foreach($part_counts as $i => $part)
-{
-	$response = $s3->upload_part($bucket, $upload_file_name, $upload_id,
-		array(
-			'expect' => '100-continue',
-			'fileUpload' => $file,
-			'partNumber' => ($i + 1),
-			'seekTo' => (integer)$part['seekTo'],
-			'length' => (integer)$part['length']
-		));
-	
-	if ($response->isOK())
-	{
-		echo "Part number $current_part of $total_parts uploaded." . PHP_EOL;
-		$current_part++;
-	}
-	else
-	{
-		echo "Upload of file $upload_file_name failed, aborting upload." .
-				PHP_EOL;
-		$s3->abort_multipart_upload($bucket, $upload_file_name, $upload_id);
-		die();
-	}
+// Perform the upload. Abort the upload if something goes wrong
+try {
+    $uploader->upload();
+    echo "Upload complete.\n";
+    echo "File $upload_file_name successfully uploaded to $bucket ." . PHP_EOL . PHP_EOL;
+} catch (MultipartUploadException $e) {
+    $uploader->abort();
+    echo "Upload failed.\n";
+    echo "Upload of file $upload_file_name to $bucket failed." . PHP_EOL . PHP_EOL;
+	die();
 }
 
 echo PHP_EOL;
@@ -202,16 +193,6 @@ $response = $s3->complete_multipart_upload($bucket, $upload_file_name, $upload_i
 
 // release resources
 fclose($file);
-
-if ($response->isOK())
-{
-	echo "File $upload_file_name successfully uploaded to $bucket ." . PHP_EOL . PHP_EOL;
-}
-else
-{
-	echo "Upload of file $upload_file_name to $bucket failed." . PHP_EOL . PHP_EOL;
-	die();
-}
 
 echo "Finished uploading." . PHP_EOL . PHP_EOL;
 
@@ -225,17 +206,25 @@ $interval = new DateInterval('P' . $days . 'D');
 
 // grab only the backup files from the bucket
 // will return 1000 results (if there are that many)
-$response = $s3->list_objects($bucket, array('prefix' => 'backup_' . $config['user']));
+$iterator = $s3->getIterator('ListObjects', array(
+    'Bucket' => $bucket,
+    'Prefix' => $config['backup_prefix'] . '_'
+));
 
 // essentially I am using the DateTime class to parse the string I get back
-foreach($response->body->Contents as $file)
+foreach($iterator as $file)
 {
-	$time = new DateTime($file->LastModified->to_string());
+	$time = new DateTime($file['LastModified']);
 	$stamp = $time->getTimestamp();
 	if ($stamp < $file_cutoff_time)
 	{
-		echo 'Deleting ' . $file->Key . PHP_EOL;
-		$s3->delete_object($bucket, $file->Key);
+		echo 'Deleting ' . $file['Key'] . PHP_EOL;
+		$s3->deleteObjects(array(
+    		'Bucket' => $bucket,
+    		'Objects' => array(
+    			'key' => $file['Key']
+    		)
+    	));
 	}
 }
 
