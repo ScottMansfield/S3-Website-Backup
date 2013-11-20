@@ -25,7 +25,7 @@ $config = array(
 	'local_backup_days'  => 5,
 	'home_dir'           => '/path/to/home/directory',
 	's3_key'             => 'OMGTHISISMYKEY',
-	's3_secret'          => 'PLEASEDONTSHARETHISSECRETKEYWITHANYONE',
+	's3_secret'          => 'PLEASEDONTSHARETHISSECRETKEYWITHANYONE', // must have trailing forward slash
 	'bucket'             => 'mr-bucket-rules',
 	'chunk_size_in_MB'   => 10,
 	'remote_backup_days' => 10
@@ -65,7 +65,7 @@ foreach($sites as $site_name => $details)
 		
 		// backup_dir/mysql/db_backup_dbname_0000_00_00_00:00:00.bak.gz
 		$path = $mysql_backup_dir . 'db_backup_' .
-				escapeshellarg($details['db_name']) . '_' . $date . '.bak.gz';
+				escapeshellarg($details['db_name']) . '_' . $date . '.bak.sql.gz';
 		
 		// mysqldump -h host.example.com -u user -ppassword dbname | gzip > path
 		$command = 'mysqldump -h ' . escapeshellarg($details['db_host']) .
@@ -187,10 +187,6 @@ try {
 
 echo PHP_EOL;
 
-$parts = $s3->list_parts($bucket, $upload_file_name, $upload_id);
-$response = $s3->complete_multipart_upload($bucket, $upload_file_name, $upload_id,
-										   $parts);
-
 // release resources
 fclose($file);
 
@@ -208,7 +204,6 @@ $interval = new DateInterval('P' . $days . 'D');
 // will return 1000 results (if there are that many)
 $iterator = $s3->getIterator('ListObjects', array(
     'Bucket' => $bucket,
-    'Prefix' => $config['backup_prefix'] . '_'
 ));
 
 // essentially I am using the DateTime class to parse the string I get back
