@@ -217,7 +217,7 @@ foreach($iterator as $file)
 		$s3->deleteObjects(array(
     		'Bucket' => $bucket,
     		'Objects' => array(
-    			'key' => $file['Key']
+    				array( 'key' => $file['Key'] )
     		)
     	));
 	}
